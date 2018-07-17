@@ -6,7 +6,45 @@ const home = win
   ? process.env.USERPROFILE
   : process.env.HOME
   
+const isUppercase = char =>
+  char.charCodeAt(0) >= 65 && char.charCodeAt(0) <= 90
+
+const simpleSplit = (chars) => {
+  let str = ''
+  let out = []
+  let index = 0
+
+  const put = value => {
+    out.push(value)
+    str = ''
+  }
+
+  while (index < chars.length) {
+    let char = chars[index]
+    let next = chars[index + 1] || ''
+    str += char.toUpperCase()
+    index++
+    if (isUppercase(next)) {
+      put(str)
+      continue
+    }
+    if (index === chars.length) {
+      put(str)
+    }
+  }
+
+  return out
+}
+
+const snakeCase = (string) => {
+  let out = simpleSplit(string.split(''))
+  return out.join('_')
+}
+
 const normalize = (key = 'yconfig', options = {}) => {
+  if (key.endsWith('.json')) {
+    
+  }
   if (!options.path) {
     options.path = path.join(home, `.${key}`)
   }
@@ -24,7 +62,7 @@ module.exports = (...params) => {
   const load = (argv = {}) => {
     let config = {}
     try {
-      config = fs.readFileSync(options.path)
+      config = fs.readFileSync(options.path, { encoding: 'utf8' })
     } catch (err) {}
     argv[key] = typeof config === 'string' ? deserialize(config) : {}
   }
@@ -45,7 +83,12 @@ module.exports = (...params) => {
         argv[key][prop] = argv[prop]
       }
     }
-    console.log({ argv, options, key })
+    for (let prop in argv[key]) {
+      let type = typeof argv[key][prop]
+      if (['string', 'boolean', 'number'].includes(type)) {
+        process.env[snakeCase(prop)] = argv[key][prop]
+      }
+    }
     if (isStale) {
       fs.writeFileSync(options.path, serialize(argv[key]))
     }
